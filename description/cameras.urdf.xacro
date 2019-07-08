@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<robot name="rasberry_data_collection_cameras" xmlns:xacro="http://ros.org/wiki/xacro">
+    <!-- Base link for arm home -->
+    <link name="base_link"/>
+
+    <!-- Camera models -->
+    <xacro:include filename="$(find rasberry_data_collection)/description/d435/_d435.urdf.xacro"/>
+    <xacro:property name="DEG2RAD" value="${3.1415926535897931/180}"/>
+
+    <!-- Camera Model -->
+    <link name="rasberry_data_collection_camera1_link"/>
+    <sensor_d435 parent="rasberry_data_collection_camera1_link">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+    </sensor_d435>
+
+    <joint name="rasberry_data_collection_camera1_home_link_joint" type="fixed">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <parent link="base_link"/>
+        <child link="rasberry_data_collection_camera1_link"/>
+    </joint>
+</robot>
