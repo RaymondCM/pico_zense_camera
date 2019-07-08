@@ -1,0 +1,1 @@
+from weather_board.weather_board import WeatherBoardPublisher

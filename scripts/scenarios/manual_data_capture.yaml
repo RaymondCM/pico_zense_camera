@@ -1,0 +1,4 @@
+context: "ManualDataCapture"
+cameras:
+  - {name: "side_view", serial: "850312072362"}
+  - {name: "underneath_view", serial: "843112071283"}

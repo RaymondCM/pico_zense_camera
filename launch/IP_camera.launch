@@ -1,0 +1,75 @@
+<launch>
+    <!-- =========================================================================================================== -->
+    <!-- ===========================================NODE SETTINGS=================================================== -->
+    <!-- =========================================================================================================== -->
+    <!-- Global Settings For All Nodes -->
+    <arg name="debug" default="true"/>
+    <arg name="device_sync" default="false"/>
+    <arg name="odom_frame_id" default="base_link"/>
+    <arg name="initial_camera_reset" default="false"/>
+    <arg name="i2c_publisher" default="/odroid/weather_board2"/>
+
+    <!-- Camera Settings -->
+    <arg name="camera_serial" default="850312072362"/>
+    <arg name="camera_name" default="ip_camera"/>
+    <arg name="json_config" default="$(find rasberry_data_collection)/config/$(arg camera_serial).json"/>
+    <arg name="rgb_max_side" default="1280"/>
+    <arg name="rgb_min_side" default="720"/>
+    <arg name="rgb_fps" default="6"/>
+    <arg name="depth_max_side" default="1280"/>
+    <arg name="depth_min_side" default="720"/>
+    <arg name="depth_fps" default="6"/>
+    <arg name="align_depth_to_colour" default="true"/>
+    <arg name="imu_enabled" default="true"/>
+    <arg name="unite_imu_method" default="linear_interpolation"/>
+    <arg name="infrared_enabled" default="false"/>
+    <arg name="filters" default="disparity,spatial"/>
+
+    <!-- =========================================================================================================== -->
+    <!-- ===============================================NODES======================================================= -->
+    <!-- =========================================================================================================== -->
+    <!-- Launch robot state publisher -->
+    <node pkg="tf" type="static_transform_publisher" name="rasberry_data_collection_home_tf_publisher"
+          args="0 0 0 0 0 0 map $(arg odom_frame_id) 100" />
+    <param name="rasberry_data_collection_robot_description"
+           command="$(find xacro)/xacro --inorder '$(find rasberry_data_collection)/description/cameras.urdf.xacro'"/>
+    <node name="rasberry_data_collection_robot_state_publisher" pkg="robot_state_publisher" type="state_publisher">
+        <remap from="robot_description" to="rasberry_data_collection_robot_description" />
+    </node>
+
+    <!-- Launch camera -->
+    <include file="$(find rasberry_data_collection)/src/realsense_manager/camera_publisher.launch">
+        <arg name="odom_frame_id" value="$(arg odom_frame_id)"/>
+        <arg name="filters" value="$(arg filters)"/>
+        <arg name="initial_reset" value="$(arg initial_camera_reset)"/>
+        <arg name="camera_name" value="$(arg camera_name)"/>
+        <arg name="serial_no" value="$(arg camera_serial)"/>
+        <arg name="json_file_path" value="$(arg json_config)"/>
+        <arg name="device_sync" value="$(arg device_sync)"/>
+        <arg name="rgb_max_side" value="$(arg rgb_max_side)"/>
+        <arg name="rgb_min_side" value="$(arg rgb_min_side)"/>
+        <arg name="rgb_fps" value="$(arg rgb_fps)"/>
+        <arg name="depth_max_side" value="$(arg depth_max_side)"/>
+        <arg name="depth_min_side" value="$(arg depth_min_side)"/>
+        <arg name="depth_fps" value="$(arg depth_fps)"/>
+        <arg name="align_depth_to_colour" value="$(arg align_depth_to_colour)"/>
+        <arg name="imu_enabled" value="$(arg imu_enabled)"/>
+        <arg name="unite_imu_method" value="$(arg unite_imu_method)"/>
+        <arg name="infrared_enabled" value="$(arg infrared_enabled)"/>
+    </include>
+
+    <node pkg="rasberry_data_collection" type="ip_camera.py" name="rasberry_data_periodic_capture" output="screen" required="true">
+        <param name="camera_name" value="$(arg camera_name)"/>
+        <param name="period" value="600"/>
+        <param name="rgb_enabled" value="True"/>
+        <param name="depth_enabled" value="True"/>
+        <param name="aligned_depth_enabled" value="$(arg align_depth_to_colour)"/>
+        <param name="ir_enabled" value="$(arg infrared_enabled)"/>
+        <param name="i2c_publisher" value="$(arg i2c_publisher)"/>
+    </node>
+
+    <node pkg="rasberry_data_collection" type="weather_board.py" name="odroid_weather_board" output="screen">
+        <param name="ic2_device" value="/dev/ic2-5"/>
+        <param name="publisher" value="$(arg i2c_publisher)"/>
+    </node>
+</launch>

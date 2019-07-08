@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<robot name="realsense2_camera" xmlns:xacro="http://ros.org/wiki/xacro">
+  <xacro:include filename="$(find rasberry_data_collection)/description/d435/_d435.urdf.xacro" />
+  <xacro:arg name="link_name" default="camera_link"/>
+
+  <link name="$(arg link_name)" />
+  <sensor_d435 parent="$(arg link_name)">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </sensor_d435>
+</robot>
