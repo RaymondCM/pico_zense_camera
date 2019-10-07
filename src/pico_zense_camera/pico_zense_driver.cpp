@@ -112,7 +112,7 @@ public:
         this->set_sensor_intrinsics();
 
         // Initialise dynamic reconfigure server
-        this->initalise_dynamic_reconfigure_server();
+        this->initialise_dynamic_reconfigure_server();
     };
 
     static void sigsegv_handler(int sig) {
@@ -286,15 +286,15 @@ public:
 
     void dynamic_reconfigure_callback(pico_zense_camera::pico_zense_dcam710Config &config, uint32_t level) {
         ROS_INFO("Reconfigure Request: Depth Confidence threshold: %d% Depth range: %.2f",
-                config.depth_confidence_threshold, config.depth_range);
+                 config.depth_confidence_threshold, config.depth_range);
 
-        if(config.depth_range != this->depth_range_)
+        if (config.depth_range != this->depth_range_)
             this->set_range(config.depth_range);
-        if(config.depth_confidence_threshold != this->depth_threshold_)
+        if (config.depth_confidence_threshold != this->depth_threshold_)
             this->set_distance_confidence(config.depth_confidence_threshold);
     }
 
-    void initalise_dynamic_reconfigure_server() {
+    void initialise_dynamic_reconfigure_server() {
         pico_zense_camera::pico_zense_dcam710Config config;
         config.depth_range = this->depth_range_;
         config.depth_confidence_threshold = this->depth_threshold_;
@@ -312,17 +312,17 @@ public:
         this->colour_pub_ = this->colour_it_->advertiseCamera("image_raw", 30);
         this->depth_pub_ = this->depth_it_->advertiseCamera("image_raw", 30);
         this->aligned_pub_ = this->aligned_it_->advertiseCamera("image_raw", 30);
+        auto aligned_depth_vis_pub = this->aligned_it_->advertise("colourmap_jet", 30);
 
         // Containers for frames
         PsReturnStatus status;
         PsFrame depth_frame = {0};
         PsFrame colour_frame = {0};
         PsFrame aligned_depth_to_colour_frame = {0};
-        cv::Mat colour_mat, depth_mat, aligned_depth_to_colour_mat;
+        cv::Mat colour_mat, depth_mat, aligned_depth_to_colour_mat, aligned_depth_vis_mat;
 
         int cycle_id = 0;
         while (ros::ok()) {
-//            cout << "Cycle Count: " << cycle_id++ << endl;
             // Get next frame set
             status = PsReadNextFrame(this->device_index_);
             if (status != PsRetOK) {
@@ -351,6 +351,11 @@ public:
             aligned_depth_to_colour_mat = cv::Mat(aligned_depth_to_colour_frame.height,
                                                   aligned_depth_to_colour_frame.width,
                                                   CV_16UC1, aligned_depth_to_colour_frame.pFrameData);
+            aligned_depth_vis_mat = cv::Mat(aligned_depth_to_colour_frame.height,
+                                            aligned_depth_to_colour_frame.width,
+                                            CV_16UC1, aligned_depth_to_colour_frame.pFrameData);
+            aligned_depth_vis_mat.convertTo(aligned_depth_vis_mat, CV_8U, 255.0 / this->slope_);
+            applyColorMap(aligned_depth_vis_mat, aligned_depth_vis_mat, cv::COLORMAP_JET);
 
             // Set non static camera_info information (width, height and timestamp)
             ros::Time now = ros::Time::now();
@@ -374,10 +379,13 @@ public:
             sensor_msgs::ImagePtr aligned_msg = cv_bridge::CvImage(aligned_ci->header,
                                                                    sensor_msgs::image_encodings::TYPE_16UC1,
                                                                    aligned_depth_to_colour_mat).toImageMsg();
-
+            sensor_msgs::ImagePtr aligned_vis_msg = cv_bridge::CvImage(aligned_ci->header,
+                                                                       sensor_msgs::image_encodings::TYPE_8UC3,
+                                                                       aligned_depth_vis_mat).toImageMsg();
             this->colour_pub_.publish(colour_msg, colour_ci);
             this->depth_pub_.publish(depth_msg, depth_ci);
             this->aligned_pub_.publish(aligned_msg, aligned_ci);
+            aligned_depth_vis_pub.publish(aligned_vis_msg);
 
             // Process any callbacks
             ros::spinOnce();
@@ -417,7 +425,6 @@ private:
 };
 
 
-
 int main(int argc, char *argv[]) {
     ros::init(argc, argv, "pico_zense_manager");
 
@@ -429,7 +436,7 @@ int main(int argc, char *argv[]) {
     int rgb_height = ros::param::param<int>("~rgb_height", 720);
 
     PicoSenseManager manager = PicoSenseManager(device_index, camera_name, depth_confidence_threshold, depth_range,
-            rgb_width, rgb_height);
+                                                rgb_width, rgb_height);
     manager.run();
     return 0;
 }
