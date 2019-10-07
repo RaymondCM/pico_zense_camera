@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>rasberry_data_collection</name>
+  <name>pico_zense_camera</name>
   <version>0.0.0</version>
-  <description>The rasberry_data_collection package</description>
+  <description>The pico_zense_camera package</description>
 
   <maintainer email="rkirk@lincoln.ac.uk">raymond</maintainer>
 
@@ -12,8 +12,6 @@
   <build_depend>roscpp</build_depend>
   <build_depend>rospy</build_depend>
   <build_depend>std_msgs</build_depend>
-  <build_depend>realsense2_camera</build_depend>
-  <build_depend>ros_numpy</build_depend>
   <build_depend>message_generation</build_depend>
   <build_depend>dynamic_reconfigure</build_depend>
   <build_depend>opencv2</build_depend>
@@ -22,8 +20,6 @@
   <build_export_depend>roscpp</build_export_depend>
   <build_export_depend>rospy</build_export_depend>
   <build_export_depend>std_msgs</build_export_depend>
-  <build_export_depend>realsense2_camera</build_export_depend>
-  <build_export_depend>ros_numpy</build_export_depend>
   <build_export_depend>opencv2</build_export_depend>
   <build_export_depend>camera_info_manager</build_export_depend>
 
@@ -31,8 +27,6 @@
   <exec_depend>rospy</exec_depend>
   <exec_depend>std_msgs</exec_depend>
   <exec_depend>opencv2</exec_depend>
-  <exec_depend>realsense2_camera</exec_depend>
-  <exec_depend>ros_numpy</exec_depend>
   <exec_depend>message_runtime</exec_depend>
   <exec_depend>dynamic_reconfigure</exec_depend>
   <exec_depend>camera_info_manager</exec_depend>
