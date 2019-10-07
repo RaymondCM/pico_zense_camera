@@ -36,7 +36,8 @@ public:
             depth_threshold_(depth_threshold),
             depth_range_(depth_range),
             rgb_width_(rgb_width),
-            rgb_height_(rgb_height) {
+            rgb_height_(rgb_height),
+            slope_(1450) {
         signal(SIGSEGV, PicoSenseManager::sigsegv_handler);
         PsReturnStatus status;
 
