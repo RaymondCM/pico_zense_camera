@@ -46,11 +46,11 @@ public:
             throw std::runtime_error(
                     "Device index outside of available devices range 0-" + std::to_string(this->device_count));
 
+        // Set distance confidence
+        this->set_distance_confidence(this->depth_threshold);
+
         //Set the Depth Range to Near through PsSetDepthRange interface
-        PsExceptionOnFail(PsSetDepthRange(this->device_index, PsNearRange),
-                          "Could not set device " + std::to_string(this->device_index) +
-                          " to 0-1m depth range (PSNearRange)");
-        ROS_INFO("Set device %d depth to PSNearRange (0-1m)", this->device_index);
+        this->set_range(this->depth_range);
 
         // Attempt to open the device
         PsExceptionOnFail(PsOpenDevice(this->device_index), "OpenDevice failed!");
@@ -65,10 +65,18 @@ public:
                           "Set DataMode Failed failed!");
         ROS_INFO("Set capture mode to DepthAndRGB_30 for device %d", this->device_index);
 
+        // Set default resolution
+        this->set_resolution(this->rgb_width, this->rgb_height);
+
         // Enable depth to rgb frame alignment in the API
         PsExceptionOnFail(PsSetMapperEnabledRGBToDepth(this->device_index, true),
                           "Could not enable depth to rgb alignment");
         ROS_INFO("Enabled depth to rgb alignment for device %d", this->device_index);
+
+        // Set synchronisation between rgb and depth
+        PsExceptionOnFail(PsSetSynchronizeEnabled(this->device_index, true),
+                          "Could not enable sensor synchronisation between rgb and depth sensors");
+        ROS_INFO("Enabled sensor synchronisation for device %d", this->device_index);
 
         // Set distortion correction for all sensors
         PsExceptionOnFail(PsSetDepthDistortionCorrectionEnabled(this->device_index, true),
@@ -79,17 +87,12 @@ public:
                 "Could not enable ir distortion correction");
         ROS_INFO("Enabled distortion correction for device %d", this->device_index);
 
-
-        // Set synchronisation between rgb and depth
-        PsExceptionOnFail(PsSetSynchronizeEnabled(this->device_index, true),
-                "Could not enable sensor synchronisation between rgb and depth sensors");
-        ROS_INFO("Enabled sensor synchronisation for device %d", this->device_index);
-
         // Set smoothing filter
         PsExceptionOnFail(PsSetFilter(this->device_index, PsSmoothingFilter, true),
                 "Could not enable depth smoothing filter");
         ROS_INFO("Enabled smoothing filter for device %d", this->device_index);
 
+        // Set intrinsics/extrinsics
         this->set_sensor_intrinsics();
     };
 
@@ -176,10 +179,84 @@ public:
         ROS_INFO("Successfully received intrinsic and extrinsic parameters for device %d", this->device_index);
     }
 
+    void set_resolution(int width, int height) {
+        std::string message("Resolution " + to_string(width) + "x" + to_string(height));
+
+        PsFrameMode frame_mode;
+        frame_mode.fps = 30;
+        frame_mode.pixelFormat = PsPixelFormatBGR888;
+
+        int valid_resolutions[4][2]{{1920, 1080}, {1280, 720}, {640, 480}, {640, 360}};
+        bool matched_resolution = false;
+
+        for(auto& dims : valid_resolutions) {
+            int v_width = dims[0], v_height = dims[1];
+            if(width == v_width && height == v_height) {
+                frame_mode.resolutionWidth = v_width;
+                frame_mode.resolutionHeight = v_height;
+                matched_resolution = true;
+            }
+        }
+
+        if(!matched_resolution) {
+            message += " not valid. Valid resolutions 1920x1080, 1280x720, 640x(480|360)";
+            ROS_ERROR(message.c_str());
+            throw std::runtime_error(message);
+        }
+
+        PsExceptionOnFail(PsSetFrameMode(this->device_index, PsRGBFrame, &frame_mode),
+                          "Could not set " + message + " for device.");
+
+        message += " has been set for device " + to_string(this->device_index);
+        ROS_INFO(message.c_str());
+    }
+
+    void set_range(double range) {
+        if(range < 0 || range > 15) {
+            string message("Please set a range between 0-15m");
+            ROS_ERROR(message.c_str());
+            throw std::runtime_error(message);
+        }
+
+        string range_identifiers[9]{"PsNearRange", "PsMidRange", "PsFarRange", "PsXNearRange", "PsXMidRange",
+                                    "PsXFarRange", "PsXXNearRange", "PsXXMidRange", "PsXXFarRange"};
+        double ranges[9][2]{{-1, 1.45}, {1.45, 3.0}, {3.0, 4.4}, {4.4, 4.8}, {4.8, 5.6}, {5.6, 7.5}, {7.5, 9.6},
+                            {9.6, 11.2}, {11.2, 15.0}};
+        uint16_t slopes[9]{1450, 3000, 4400, 4800, 5600, 7500, 9600, 11200, 15000};
+
+        PsDepthRange depth_range = static_cast<PsDepthRange>(0);
+        uint16_t new_slope = slopes[0];
+        string identifier = range_identifiers[0];
+
+        for (int i = 0; i < 9; ++i) {
+            double min_range = ranges[i][0], max_range = ranges[i][1];
+            identifier = range_identifiers[i];
+            if(range > min_range && range <= max_range) {
+                depth_range = static_cast<PsDepthRange>(i);
+                new_slope = slopes[i];
+                break;
+            }
+        }
+
+        // Set depth threshold
+        this->slope = new_slope;
+        PsExceptionOnFail(PsSetDepthRange(this->device_index, depth_range), "Could not set depth range " + identifier);
+        ROS_INFO("Set depth range %s at max distance %.2fm", identifier.c_str(), (double) this->slope / 1000.0);
+    }
+
+    void set_distance_confidence(uint16_t threshold) {
+        if(threshold < 0 || threshold > 100) {
+            string message("Cannot set threshold greater that 100%");
+            ROS_ERROR(message.c_str());
+            throw std::runtime_error(message);
+        }
+        this->depth_threshold = threshold;
+        PsExceptionOnFail(PsSetThreshold(this->device_index, this->depth_threshold), "Could not set depth threshold");
+        ROS_INFO("Enabled depth threshold at %dcm for device %d", this->depth_threshold, this->device_index);
+    }
+
     void run() {
         // Initialise ROS nodes
-        ros::NodeHandle nh;
-
         sensor_msgs::CameraInfoPtr colour_ci(new sensor_msgs::CameraInfo(colour_info->getCameraInfo()));
         sensor_msgs::CameraInfoPtr depth_ci(new sensor_msgs::CameraInfo(depth_info->getCameraInfo()));
         sensor_msgs::CameraInfoPtr aligned_ci(new sensor_msgs::CameraInfo(aligned_info->getCameraInfo()));
@@ -197,10 +274,8 @@ public:
 
         int cycle_id = 0;
         while (ros::ok()) {
-
             cout << "Cycle Count: " << cycle_id++ << endl;
             // Get next frame set
-            // Test setup by getting a single frame
             status = PsReadNextFrame(this->device_index);
             if (status != PsRetOK) {
                 ROS_WARN("Could not get next frame set from device %d", this->device_index);
@@ -279,6 +354,10 @@ private:
     image_transport::CameraPublisher colour_pub, depth_pub, aligned_pub;
 
     int32_t device_count = 0, device_index = 0, data_mode = PsDepthAndRGB_30;
+    uint16_t depth_threshold = 0, slope = 1450;
+    double depth_range = 1.0;
+    int rgb_width = 1280, rgb_height = 720;
+
     PsCameraParameters depth_intrinsics{}, colour_intrinsics{};
     PsCameraExtrinsicParameters extrinsics{};
 };
