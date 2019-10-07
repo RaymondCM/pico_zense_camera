@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(rasberry_data_collection)
+project(pico_zense_camera)
 
 ## Add support for C++11, supported in ROS Kinetic and newer
 add_definitions(-std=c++11)
@@ -9,8 +9,6 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
   sensor_msgs
-  realsense2_camera
-  ros_numpy
   message_generation
   dynamic_reconfigure
   camera_info_manager
@@ -26,13 +24,11 @@ catkin_python_setup()
 # ==============================================
 # add_service_files( FILES )
 
-add_message_files(
-  FILES
-  WeatherBoard2.msg
-  BME680.msg
-)
-
-generate_messages(DEPENDENCIES std_msgs sensor_msgs rasberry_data_collection)
+#add_message_files(
+#  FILES
+#)
+#
+#generate_messages(DEPENDENCIES std_msgs sensor_msgs pico_zense_camera)
 
 # ==============================================
 # Setup
@@ -51,9 +47,9 @@ add_executable(FrameViewer src/pico_zense/FrameViewer.cpp)
 target_link_libraries(FrameViewer ${catkin_LIBRARIES} ${libpicozense_api} ${OpenCV_LIBRARIES})
 add_dependencies(FrameViewer ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-add_executable(FramePublisher src/pico_zense/FramePublisher.cpp)
-target_link_libraries(FramePublisher ${catkin_LIBRARIES} ${libpicozense_api} ${OpenCV_LIBRARIES})
-add_dependencies(FramePublisher ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_executable(pico_zense_camera src/pico_zense/pico_zense_camera.cpp)
+target_link_libraries(pico_zense_camera ${catkin_LIBRARIES} ${libpicozense_api} ${OpenCV_LIBRARIES})
+add_dependencies(pico_zense_camera ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 
 # ==============================================
