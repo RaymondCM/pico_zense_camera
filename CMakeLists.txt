@@ -36,11 +36,14 @@ catkin_python_setup()
 
 generate_messages(DEPENDENCIES std_msgs sensor_msgs pico_zense_camera)
 
+generate_dynamic_reconfigure_options(
+        cfg/pico_zense_dcam710.cfg
+)
+
 # ==============================================
 # Setup
 # ==============================================
 catkin_package(CATKIN_DEPENDS camera_info_manager image_transport tf2 tf2_ros geometry_msgs std_msgs message_runtime roscpp rospy cv_bridge)
-
 
 # ==============================================
 # Pico Zense setup
