@@ -12,6 +12,11 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   dynamic_reconfigure
   camera_info_manager
+  image_transport
+  tf2
+  tf2_ros
+  tf2_geometry_msgs
+  cv_bridge
 )
 
 # ==============================================
@@ -34,7 +39,7 @@ generate_messages(DEPENDENCIES std_msgs sensor_msgs pico_zense_camera)
 # ==============================================
 # Setup
 # ==============================================
-catkin_package(CATKIN_DEPENDS camera_info_manager std_msgs message_runtime)
+catkin_package(CATKIN_DEPENDS camera_info_manager image_transport tf2 tf2_ros geometry_msgs std_msgs message_runtime roscpp rospy cv_bridge)
 
 
 # ==============================================
