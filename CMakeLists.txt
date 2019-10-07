@@ -28,7 +28,8 @@ catkin_python_setup()
 #  FILES
 #)
 #
-#generate_messages(DEPENDENCIES std_msgs sensor_msgs pico_zense_camera)
+
+generate_messages(DEPENDENCIES std_msgs sensor_msgs pico_zense_camera)
 
 # ==============================================
 # Setup
@@ -40,14 +41,14 @@ catkin_package(CATKIN_DEPENDS camera_info_manager std_msgs message_runtime)
 # Pico Zense setup
 # ==============================================
 find_package(OpenCV REQUIRED)
-find_library(libpicozense_api NAMES libpicozense_api_x64_ubuntu_16.04.so PATHS src/pico_zense/lib/)
-include_directories(include include/pico_zense ${catkin_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
+find_library(libpicozense_api NAMES libpicozense_api_x64_ubuntu_16.04.so PATHS src/pico_zense_camera/lib/)
+include_directories(include include/pico_zense_camera ${catkin_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
 
-add_executable(FrameViewer src/pico_zense/FrameViewer.cpp)
+add_executable(FrameViewer src/pico_zense_camera/FrameViewer.cpp)
 target_link_libraries(FrameViewer ${catkin_LIBRARIES} ${libpicozense_api} ${OpenCV_LIBRARIES})
 add_dependencies(FrameViewer ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-add_executable(pico_zense_camera src/pico_zense/pico_zense_camera.cpp)
+add_executable(pico_zense_camera src/pico_zense_camera/pico_zense_driver.cpp)
 target_link_libraries(pico_zense_camera ${catkin_LIBRARIES} ${libpicozense_api} ${OpenCV_LIBRARIES})
 add_dependencies(pico_zense_camera ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
