@@ -1,6 +1,5 @@
 #include <csignal>
 #include <iostream>
-#include <fstream>
 #include "ros/ros.h"
 #include "sensor_msgs/Image.h"
 #include <opencv2/opencv.hpp>
@@ -12,9 +11,16 @@
 #include <geometry_msgs/TransformStamped.h>
 #include <sensor_msgs/CameraInfo.h>
 #include "PicoZense_api.h"
+#include <dynamic_reconfigure/server.h>
+#include <pico_zense_camera/pico_zense_dcam710Config.h>
 
 using namespace std;
 using namespace cv;
+
+void callback(pico_zense_camera::pico_zense_dcam710Config &config, uint32_t level) {
+    ROS_INFO("Reconfigure Request: %d %f",
+             config.depth_confidence_threshold, config.depth_range);
+}
 
 class PicoSenseManager {
 public:
@@ -37,7 +43,8 @@ public:
             depth_range_(depth_range),
             rgb_width_(rgb_width),
             rgb_height_(rgb_height),
-            slope_(1450) {
+            slope_(1450),
+            server(new dynamic_reconfigure::Server<pico_zense_camera::pico_zense_dcam710Config>(private_nh)) {
         signal(SIGSEGV, PicoSenseManager::sigsegv_handler);
         PsReturnStatus status;
 
@@ -103,6 +110,9 @@ public:
 
         // Set intrinsics/extrinsics
         this->set_sensor_intrinsics();
+
+        // Initialise dynamic reconfigure server
+        this->initalise_dynamic_reconfigure_server();
     };
 
     static void sigsegv_handler(int sig) {
@@ -224,7 +234,7 @@ public:
     }
 
     void set_range(double range) {
-        if (range < 0 || range > 15) {
+        if (range < 0 || range > 5.6) {
             string message("Please set a range between 0-15m");
             ROS_ERROR(message.c_str());
             throw std::runtime_error(message);
@@ -274,6 +284,25 @@ public:
         ROS_INFO("Enabled depth confidence threshold at %d% (device %d)", this->depth_threshold_, this->device_index_);
     }
 
+    void dynamic_reconfigure_callback(pico_zense_camera::pico_zense_dcam710Config &config, uint32_t level) {
+        ROS_INFO("Reconfigure Request: Depth Confidence threshold: %d% Depth range: %.2f",
+                config.depth_confidence_threshold, config.depth_range);
+
+        if(config.depth_range != this->depth_range_)
+            this->set_range(config.depth_range);
+        if(config.depth_confidence_threshold != this->depth_threshold_)
+            this->set_distance_confidence(config.depth_confidence_threshold);
+    }
+
+    void initalise_dynamic_reconfigure_server() {
+        pico_zense_camera::pico_zense_dcam710Config config;
+        config.depth_range = this->depth_range_;
+        config.depth_confidence_threshold = this->depth_threshold_;
+        this->server->updateConfig(config);
+        this->reconfigure_callback = boost::bind(&PicoSenseManager::dynamic_reconfigure_callback, this, _1, _2);
+        this->server->setCallback(reconfigure_callback);
+    }
+
     void run() {
         // Initialise ROS nodes
         sensor_msgs::CameraInfoPtr colour_ci(new sensor_msgs::CameraInfo(colour_info_->getCameraInfo()));
@@ -293,7 +322,7 @@ public:
 
         int cycle_id = 0;
         while (ros::ok()) {
-            cout << "Cycle Count: " << cycle_id++ << endl;
+//            cout << "Cycle Count: " << cycle_id++ << endl;
             // Get next frame set
             status = PsReadNextFrame(this->device_index_);
             if (status != PsRetOK) {
@@ -349,6 +378,9 @@ public:
             this->colour_pub_.publish(colour_msg, colour_ci);
             this->depth_pub_.publish(depth_msg, depth_ci);
             this->aligned_pub_.publish(aligned_msg, aligned_ci);
+
+            // Process any callbacks
+            ros::spinOnce();
         }
 
         status = PsCloseDevice(this->device_index_);
@@ -379,7 +411,12 @@ private:
 
     PsCameraParameters depth_intrinsics_{}, colour_intrinsics_{};
     PsCameraExtrinsicParameters extrinsics_{};
+
+    std::shared_ptr<dynamic_reconfigure::Server<pico_zense_camera::pico_zense_dcam710Config>> server;
+    dynamic_reconfigure::Server<pico_zense_camera::pico_zense_dcam710Config>::CallbackType reconfigure_callback;
 };
+
+
 
 int main(int argc, char *argv[]) {
     ros::init(argc, argv, "pico_zense_manager");
