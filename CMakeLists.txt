@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   ros_numpy
   message_generation
   dynamic_reconfigure
+  camera_info_manager
 )
 
 # ==============================================
@@ -36,7 +37,7 @@ generate_messages(DEPENDENCIES std_msgs sensor_msgs rasberry_data_collection)
 # ==============================================
 # Setup
 # ==============================================
-catkin_package(CATKIN_DEPENDS std_msgs message_runtime)
+catkin_package(CATKIN_DEPENDS camera_info_manager std_msgs message_runtime)
 
 
 # ==============================================
