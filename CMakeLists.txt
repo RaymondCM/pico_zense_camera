@@ -56,7 +56,9 @@ add_executable(FrameViewer src/pico_zense_camera/FrameViewer.cpp)
 target_link_libraries(FrameViewer ${catkin_LIBRARIES} ${libpicozense_api} ${OpenCV_LIBRARIES})
 add_dependencies(FrameViewer ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-add_executable(pico_zense_camera src/pico_zense_camera/pico_zense_driver.cpp)
+add_executable(pico_zense_camera src/pico_zense_camera/pico_zense_driver.cpp
+                                 src/pico_zense_camera/pico_zense_manager.cpp
+                                 include/pico_zense_camera/pico_zense_manager.hpp)
 target_link_libraries(pico_zense_camera ${catkin_LIBRARIES} ${libpicozense_api} ${OpenCV_LIBRARIES})
 add_dependencies(pico_zense_camera ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
