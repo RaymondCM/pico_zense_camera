@@ -195,11 +195,15 @@ void PicoSenseManager::run() {
     PsFrame aligned_depth_to_colour_frame = {0};
     cv::Mat colour_mat, depth_mat, aligned_depth_to_colour_mat, aligned_depth_vis_mat;
 
+    int missed_frames = 0;
     while (ros::ok()) {
         // Get next frame set
         status = PsReadNextFrame(this->device_index_);
         if (status != PsRetOK) {
-            ROS_WARN("Could not get next frame set from device %d", this->device_index_);
+            missed_frames += 1;
+            if(missed_frames > 3)
+                ROS_WARN("Could not get next frame set from device (missed %d frames) %d", missed_frames,
+                        this->device_index_);
             continue;
         }
 
@@ -262,6 +266,9 @@ void PicoSenseManager::run() {
 
         // Process any callbacks
         ros::spinOnce();
+
+        // Indicate success
+        missed_frames = 0;
     }
 
     status = PsCloseDevice(this->device_index_);
@@ -365,16 +372,15 @@ PicoSenseManager::dynamic_reconfigure_callback(pico_zense_camera::pico_zense_dca
     ROS_INFO("Reconfigure Request: Depth Confidence threshold: %d% Depth range: %.2f RGB Resolution: %s",
              config.depth_confidence_threshold, config.depth_range, config.rgb_resolution.c_str());
 
-
     // Split resolution string ("WidthxHeight") into ints
     std::string segment;
     std::stringstream test(config.rgb_resolution);
     std::vector<std::string> token_seg_list;
-    while(std::getline(test, segment, 'x'))
+    while (std::getline(test, segment, 'x'))
         token_seg_list.push_back(segment);
-    if(token_seg_list.size() == 2) {
+    if (token_seg_list.size() == 2) {
         int width = std::stoi(token_seg_list[0]), height = std::stoi(token_seg_list[1]);
-        if(this->rgb_width_ != width || this->rgb_height_ != height)
+        if (this->rgb_width_ != width || this->rgb_height_ != height)
             this->set_resolution(width, height);
     }
 
