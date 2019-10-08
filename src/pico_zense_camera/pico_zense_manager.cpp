@@ -119,6 +119,8 @@ void PicoSenseManager::set_resolution(int width, int height) {
 
     PsExceptionOnFail(PsSetFrameMode(this->device_index_, PsRGBFrame, &frame_mode),
                       "Could not set " + message + " for device.");
+    this->rgb_width_ = frame_mode.resolutionWidth;
+    this->rgb_height_ = frame_mode.resolutionHeight;
 
     message += " has been set for device " + to_string(this->device_index_);
     ROS_INFO(message.c_str());
@@ -360,8 +362,21 @@ void PicoSenseManager::set_sensor_intrinsics() {
 
 void
 PicoSenseManager::dynamic_reconfigure_callback(pico_zense_camera::pico_zense_dcam710Config &config, uint32_t level) {
-    ROS_INFO("Reconfigure Request: Depth Confidence threshold: %d% Depth range: %.2f",
-             config.depth_confidence_threshold, config.depth_range);
+    ROS_INFO("Reconfigure Request: Depth Confidence threshold: %d% Depth range: %.2f RGB Resolution: %s",
+             config.depth_confidence_threshold, config.depth_range, config.rgb_resolution.c_str());
+
+
+    // Split resolution string ("WidthxHeight") into ints
+    std::string segment;
+    std::stringstream test(config.rgb_resolution);
+    std::vector<std::string> token_seg_list;
+    while(std::getline(test, segment, 'x'))
+        token_seg_list.push_back(segment);
+    if(token_seg_list.size() == 2) {
+        int width = std::stoi(token_seg_list[0]), height = std::stoi(token_seg_list[1]);
+        if(this->rgb_width_ != width || this->rgb_height_ != height)
+            this->set_resolution(width, height);
+    }
 
     if (config.depth_range != this->depth_range_)
         this->set_range(config.depth_range);
@@ -371,6 +386,7 @@ PicoSenseManager::dynamic_reconfigure_callback(pico_zense_camera::pico_zense_dca
 
 void PicoSenseManager::initialise_dynamic_reconfigure_server() {
     pico_zense_camera::pico_zense_dcam710Config config;
+    config.rgb_resolution = to_string(this->rgb_width_) + "x" + to_string(this->rgb_height_);
     config.depth_range = this->depth_range_;
     config.depth_confidence_threshold = this->depth_threshold_;
     this->server->updateConfig(config);
