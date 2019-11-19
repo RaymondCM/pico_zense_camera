@@ -29,6 +29,7 @@ jobs:
             # Prepare rosdep to install dependencies.
             sudo rosdep init
             rosdep update --include-eol-distros  # Support EOL distros.
+            rosdep install -y --from-paths src --ignore-src --rosdistro $ROS_DISTRO
       - name: Catkin Build
         run: |
           source /opt/ros/$ROS_DISTRO/setup.bash
