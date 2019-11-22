@@ -34,7 +34,7 @@ jobs:
           source /opt/ros/$ROS_DISTRO/setup.bash
           mkdir -p ~/catkin_ws/src
           cd ~/catkin_ws
-          mv ~/work/pico_zense_camera src/pico_zense_camera
+          mv ~/work/pico_zense_camera src/
           rosdep install --from-paths src --ignore-src -r -y
           ls -R
           catkin build pico_zense_camera
