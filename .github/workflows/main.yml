@@ -29,7 +29,6 @@ jobs:
             # Prepare rosdep to install dependencies.
             sudo rosdep init
             rosdep update --include-eol-distros  # Support EOL distros.
-            rosdep install -y --from-paths src --ignore-src --rosdistro $ROS_DISTRO
       - name: Catkin Build
         run: |
           source /opt/ros/$ROS_DISTRO/setup.bash
@@ -37,6 +36,7 @@ jobs:
           cd ~/catkin_ws
           catkin build
           source devel/setup.bash
+          rosdep install --from-paths src --ignore-src -r -y
           cd ~/catkin_ws/src
           ln -s $CI_SOURCE_PATH .
           ln -s ~/work  # $CI_SOURCE_PATH
