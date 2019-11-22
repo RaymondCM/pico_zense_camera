@@ -36,6 +36,6 @@ jobs:
           cd ~/catkin_ws
           mv ~/work/pico_zense_camera src/pico_zense_camera
           rosdep install --from-paths src --ignore-src -r -y
-          source devel/setup.bash
           ls -R
           catkin build pico_zense_camera
+          source devel/setup.bash
