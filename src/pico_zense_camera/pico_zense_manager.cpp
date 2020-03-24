@@ -6,6 +6,7 @@ PicoSenseManager::PicoSenseManager(int32_t device_index, const string &camera_na
         colour_nh_(camera_name + "/colour"),
         depth_nh_(camera_name + "/depth"),
         aligned_nh_(camera_name + "/aligned_depth_to_colour"),
+        imu_nh_(camera_name + "/imu"),
         camera_name_(camera_name),
         colour_info_(new camera_info_manager::CameraInfoManager(colour_nh_)),
         depth_info_(new camera_info_manager::CameraInfoManager(depth_nh_)),
@@ -182,11 +183,13 @@ void PicoSenseManager::run() {
     sensor_msgs::CameraInfoPtr colour_ci(new sensor_msgs::CameraInfo(colour_info_->getCameraInfo()));
     sensor_msgs::CameraInfoPtr depth_ci(new sensor_msgs::CameraInfo(depth_info_->getCameraInfo()));
     sensor_msgs::CameraInfoPtr aligned_ci(new sensor_msgs::CameraInfo(aligned_info_->getCameraInfo()));
+    sensor_msgs::ImuPtr imu_msg(new sensor_msgs::Imu());
 
     this->colour_pub_ = this->colour_it_->advertiseCamera("image_raw", 30);
     this->depth_pub_ = this->depth_it_->advertiseCamera("image_raw", 30);
     this->aligned_pub_ = this->aligned_it_->advertiseCamera("image_raw", 30);
     auto aligned_depth_vis_pub = this->aligned_it_->advertise("colourmap_jet", 30);
+    this->imu_pub_ = this->imu_nh_.advertise<sensor_msgs::Imu>("", 30);
 
     // Containers for frames
     PsReturnStatus status;
@@ -194,6 +197,7 @@ void PicoSenseManager::run() {
     PsFrame colour_frame = {0};
     PsFrame aligned_depth_to_colour_frame = {0};
     cv::Mat colour_mat, depth_mat, aligned_depth_to_colour_mat, aligned_depth_vis_mat;
+    PsImu imu_data = {0};
 
     int missed_frames = 0;
     while (ros::ok()) {
@@ -204,6 +208,16 @@ void PicoSenseManager::run() {
             if(missed_frames > 3)
                 ROS_WARN("Could not get next frame set from device (missed %d frames) %d", missed_frames,
                         this->device_index_);
+            continue;
+        }
+
+        status = PsGetImu(this->device_index_, &imu_data);
+
+        if (status != PsRetOK) {
+            missed_frames += 1;
+            if(missed_frames > 3)
+                ROS_WARN("Could not get IMU data from device (missed %d frames) %d", missed_frames,
+                         this->device_index_);
             continue;
         }
 
@@ -246,6 +260,15 @@ void PicoSenseManager::run() {
         aligned_ci->width = aligned_depth_to_colour_frame.width;
         aligned_ci->header.stamp = now;
 
+        imu_msg->header.stamp = now;
+        imu_msg->angular_velocity.x = imu_data.gyro.x;
+        imu_msg->angular_velocity.y = imu_data.gyro.y;
+        imu_msg->angular_velocity.z = imu_data.gyro.z;
+        imu_msg->linear_acceleration.x = imu_data.acc.x;
+        imu_msg->linear_acceleration.y = imu_data.acc.y;
+        imu_msg->linear_acceleration.z = imu_data.acc.z;
+        imu_msg->orientation_covariance[0] = -1;
+
         // Publish messages and camera info
         sensor_msgs::ImagePtr colour_msg = cv_bridge::CvImage(colour_ci->header,
                                                               sensor_msgs::image_encodings::TYPE_8UC3,
@@ -263,6 +286,7 @@ void PicoSenseManager::run() {
         this->depth_pub_.publish(depth_msg, depth_ci);
         this->aligned_pub_.publish(aligned_msg, aligned_ci);
         aligned_depth_vis_pub.publish(aligned_vis_msg);
+        this->imu_pub_.publish(imu_msg);
 
         // Process any callbacks
         ros::spinOnce();

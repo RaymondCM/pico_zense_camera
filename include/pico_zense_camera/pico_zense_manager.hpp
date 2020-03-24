@@ -6,6 +6,7 @@
 #include <iostream>
 #include "ros/ros.h"
 #include "sensor_msgs/Image.h"
+#include "sensor_msgs/Imu.h"
 #include <opencv2/opencv.hpp>
 #include <cv_bridge/cv_bridge.h>
 #include <image_transport/image_transport.h>
@@ -41,11 +42,12 @@ private:
     void initialise_dynamic_reconfigure_server();
 
     std::string camera_name_;
-    ros::NodeHandle private_nh, colour_nh_, depth_nh_, aligned_nh_;
+    ros::NodeHandle private_nh, colour_nh_, depth_nh_, aligned_nh_, imu_nh_;
     std::shared_ptr<image_transport::ImageTransport> colour_it_, depth_it_, aligned_it_;
     std::shared_ptr<camera_info_manager::CameraInfoManager> colour_info_, depth_info_, aligned_info_;
 
     image_transport::CameraPublisher colour_pub_, depth_pub_, aligned_pub_;
+    ros::Publisher imu_pub_;
 
     int32_t device_count_, device_index_, data_mode_ = PsDepthAndRGB_30;
     uint16_t depth_threshold_, slope_;
@@ -56,6 +58,7 @@ private:
     PsCameraExtrinsicParameters extrinsics_{};
 
     std::shared_ptr<dynamic_reconfigure::Server<pico_zense_camera::pico_zense_dcam710Config>> server;
+
     dynamic_reconfigure::Server<pico_zense_camera::pico_zense_dcam710Config>::CallbackType reconfigure_callback;
 };
 
