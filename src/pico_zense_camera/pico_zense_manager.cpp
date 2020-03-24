@@ -198,6 +198,7 @@ void PicoSenseManager::run() {
     PsFrame aligned_depth_to_colour_frame = {0};
     cv::Mat colour_mat, depth_mat, aligned_depth_to_colour_mat, aligned_depth_vis_mat;
     PsImu imu_data = {0};
+    std::string camera_frame(this->camera_name_ + "_frame");
 
     int missed_frames = 0;
     while (ros::ok()) {
@@ -261,6 +262,7 @@ void PicoSenseManager::run() {
         aligned_ci->header.stamp = now;
 
         imu_msg->header.stamp = now;
+        imu_msg->header.frame_id = camera_frame;
         imu_msg->angular_velocity.x = imu_data.gyro.x;
         imu_msg->angular_velocity.y = imu_data.gyro.y;
         imu_msg->angular_velocity.z = imu_data.gyro.z;
